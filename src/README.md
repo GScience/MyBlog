@@ -2,7 +2,7 @@
 home: true
 layout: BlogHome
 icon: home
-title: 完能的个人博客
+title: 首页
 heroImage: logo.png
 heroText: 完能的个人网站
 heroFullScreen: false
