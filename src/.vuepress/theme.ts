@@ -16,6 +16,8 @@ export default hopeTheme({
   logo: "logo.png",
 
   repo: "GScience/GScience.github.io",
+  
+  docsBranch: "master",
 
   docsDir: "src",
 
