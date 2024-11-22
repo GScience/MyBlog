@@ -59,7 +59,16 @@ export default hopeTheme({
     //   provider: "Waline",
     //   serverURL: "https://waline-comment.vuejs.press",
     // },
-
+    comment: {
+      provider: "Giscus",
+      repo: "GScience/gscience.github.io",
+      repoId: "R_kgDONTKqGQ",
+      category: "General",
+      categoryId: "DIC_kwDONTKqGc4CkgZI",
+      lazyLoading: true,
+      reactionsEnabled: true,
+      inputPosition: "bottom",
+    },
     components: {
       components: ["Badge", "VPCard"],
     },
