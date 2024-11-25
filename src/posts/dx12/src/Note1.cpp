@@ -100,7 +100,7 @@ int main() {
 	{
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(ctx.rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
-		// 为每一帧创建RTV
+		// 为每一个RT创建RTV
 		for (UINT n = 0; n < FrameCount; n++)
 		{
 			ThrowIfFailed(ctx.swapChain->GetBuffer(n, IID_PPV_ARGS(&ctx.renderTargets[n])));
