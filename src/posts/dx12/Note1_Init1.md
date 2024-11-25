@@ -9,3 +9,7 @@ tag:
 ---
 
 # DX12学习笔记1——初始化阶段
+
+[查看完整代码](https://github.com/GScience/gscience.github.io/tree/master/src/posts/dx12/src/Note1.cpp)
+
+施工中
