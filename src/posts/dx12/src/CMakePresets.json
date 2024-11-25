@@ -1,0 +1,43 @@
+{
+	"version": 8,
+	"cmakeMinimumRequired": {
+		"major": 3,
+		"minor": 23,
+		"patch": 0
+	},
+	"configurePresets": [
+		{
+			"name": "ninja-multi",
+			"hidden": true,
+			"binaryDir": "${sourceDir}/out",
+			"displayName": "Ninja Multi-Config",
+			"description": "Default build using Ninja Multi-Config generator",
+			"generator": "Ninja Multi-Config"
+		},
+		{
+			"name": "vcpkg",
+			"hidden": true,
+			"cacheVariables": {
+				"CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+			}
+		},
+		{
+			"name": "default",
+			"inherits": [ "ninja-multi", "vcpkg" ]
+		}
+	],
+	"buildPresets": [
+		{
+			"name": "default-debug",
+			"displayName": "Default Debug Build",
+			"configurePreset": "default",
+			"configuration": "Debug"
+		},
+		{
+			"name": "default-release",
+			"displayName": "Default Release Build",
+			"configurePreset": "default",
+			"configuration": "Release"
+		}
+	]
+}

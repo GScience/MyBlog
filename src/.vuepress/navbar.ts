@@ -5,8 +5,16 @@ export default navbar([
   {
     text: "文章",
     icon: "pen-to-square",
-    prefix: "/posts/",
+    prefix: "/",
     children: [
+      {
+        text: "DX12笔记",
+        link: "posts/dx12/"
+      },
+      {
+        text: "所有文章",
+        link: "article/"
+      }
     ],
   },
   {

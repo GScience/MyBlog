@@ -13,7 +13,8 @@ projects:
     name: 完犊子Bot
     desc: 一款聊天机器人，内部支持多种命令和功能
     link: https://github.com/GScience/WanBot
-
+autoDescription: false
+description: 完能的个人博客，随手记录点灵感和学习笔记
 footer: "Powered by <a href='https://theme-hope.vuejs.press/'>vuepress-theme-hope<a/>"
 
 ---
