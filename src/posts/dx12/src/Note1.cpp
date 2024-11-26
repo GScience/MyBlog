@@ -1,6 +1,7 @@
 #include "common/stdafx.h"
 #include "common/Window.h"
 #include "common/Dx12helper.h"
+#include <algorithm>
 
 constexpr UINT FrameCount = 2;
 
@@ -53,24 +54,36 @@ void MoveToNextFrame() {
     ctx->fenceValues[ctx->curFrameIndex] = currentFenceValue + 1;
 }
 
+static float clearColor[] = { 0.8f, 0.2f, 0.0f, 1.0f };
+
 void Render() {
     ThrowIfFailed(ctx->commandAllocator[ctx->curFrameIndex]->Reset());
     ThrowIfFailed(ctx->commandList->Reset(ctx->commandAllocator[ctx->curFrameIndex].Get(), nullptr));
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(ctx->rtvHeap->GetCPUDescriptorHandleForHeapStart(), ctx->curFrameIndex, ctx->rtvDescriptorSize);
     ctx->commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(ctx->renderTargets[ctx->curFrameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET));
-    const float clearColor[] = { 0.8f, 0.2f, 0.0f, 1.0f };
+
     ctx->commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
     ctx->commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(ctx->renderTargets[ctx->curFrameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT));
     ThrowIfFailed(ctx->commandList->Close());
 
     ID3D12CommandList* ppCommandLists[] = { ctx->commandList.Get() };
     ctx->commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
-    ThrowIfFailed(ctx->swapChain->Present(1, 0));
+    ThrowIfFailed(ctx->swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING));
     MoveToNextFrame();
 }
 
 void Update() {
+    static UINT64 lastTime = GetTickCount64();
+    static float lastRad[3]{ 0 };
+    UINT64 curTime = GetTickCount64();
+    lastRad[0] = std::fmod(lastRad[0] + (curTime - lastTime) / 996.0f, std::acos(-1));
+    lastRad[1] = std::fmod(lastRad[1] + (curTime - lastTime) / 1009.0f, std::acos(-1));
+    lastRad[2] = std::fmod(lastRad[2] + (curTime - lastTime) / 666.0f, std::acos(-1));
+    clearColor[0] = std::sin(lastRad[0]) * 0.4f + 0.2f;
+    clearColor[1] = std::sin(lastRad[1]) * 0.4f + 0.2f;
+    clearColor[2] = std::sin(lastRad[2]) * 0.4f + 0.2f;
+    lastTime = curTime;
 }
 
 void Init() {
@@ -109,6 +122,7 @@ void Init() {
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
     ComPtr<IDXGISwapChain1> swapChain1;
     ThrowIfFailed(ctx->factory->CreateSwapChainForHwnd(
         ctx->commandQueue.Get(),
