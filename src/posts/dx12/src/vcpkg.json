@@ -1,5 +1,5 @@
 {
-	"dependencies": [
-		"directx-headers"
-	]
+  "dependencies": [
+    "directx-headers"
+  ]
 }
