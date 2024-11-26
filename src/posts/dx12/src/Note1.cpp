@@ -8,6 +8,8 @@ constexpr UINT FrameCount = 2;
 using Microsoft::WRL::ComPtr;
 
 struct DxContext {
+    DWORD callbackCookie = 0;
+
     ComPtr<IDXGIFactory7> factory;
     ComPtr<IDXGIAdapter1> adapter;
     ComPtr<ID3D12Device10> device;
@@ -30,12 +32,6 @@ struct DxContext {
 std::unique_ptr<Window> wnd;
 std::unique_ptr<DxContext> ctx;
 
-void EnableDebugLayer() {
-    ComPtr<ID3D12Debug> debugController;
-    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-        debugController->EnableDebugLayer();
-}
-
 void WaitForGpu() {
     ThrowIfFailed(ctx->commandQueue->Signal(ctx->fence.Get(), ctx->fenceValues[ctx->curFrameIndex]));
     ThrowIfFailed(ctx->fence->SetEventOnCompletion(ctx->fenceValues[ctx->curFrameIndex], ctx->fenceEvent));
@@ -52,6 +48,11 @@ void MoveToNextFrame() {
         WaitForSingleObjectEx(ctx->fenceEvent, INFINITE, FALSE);
     }
     ctx->fenceValues[ctx->curFrameIndex] = currentFenceValue + 1;
+}
+void OnD3dMessage(D3D12_MESSAGE_CATEGORY Category, D3D12_MESSAGE_SEVERITY Severity, D3D12_MESSAGE_ID ID, LPCSTR pDescription, void* pContext) {
+    printf("[%d][%d]%d: %s\n", Category, Severity, ID, pDescription);
+    if (Severity == D3D12_MESSAGE_SEVERITY_ERROR)
+        __debugbreak();
 }
 
 static float clearColor[] = { 0.8f, 0.2f, 0.0f, 1.0f };
@@ -90,7 +91,9 @@ void Init() {
     UINT dxgiFactoryFlags = 0;
     // 启用调试层
 #if defined(_DEBUG)
-    EnableDebugLayer();
+    ComPtr<ID3D12Debug> debugController;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+        debugController->EnableDebugLayer();
     dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
@@ -106,6 +109,13 @@ void Init() {
         D3D_FEATURE_LEVEL_12_0,
         IID_PPV_ARGS(&ctx->device)
     ));
+
+    // 注册设备消息回调
+#if defined(_DEBUG)
+    ComPtr<ID3D12InfoQueue1> infoQueue;
+    if (SUCCEEDED(ctx->device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
+        ThrowIfFailed(infoQueue->RegisterMessageCallback(OnD3dMessage, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, &ctx->callbackCookie));
+#endif
 
     // 创建命令队列
     D3D12_COMMAND_QUEUE_DESC queueDesc = {};
@@ -173,13 +183,31 @@ void Init() {
     WaitForGpu();
 }
 
+void CleanUp() {
+    WaitForGpu();
+    CloseHandle(ctx->fenceEvent);
+#if defined(_DEBUG)
+    {
+        ComPtr<ID3D12InfoQueue1> infoQueue;
+        if (ctx->callbackCookie != 0 && SUCCEEDED(ctx->device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
+            ThrowIfFailed(infoQueue->UnregisterMessageCallback(ctx->callbackCookie));
+    }
+#endif
+    ctx = nullptr;
+    wnd = nullptr;
+#if defined(_DEBUG)
+    {
+        ComPtr<IDXGIDebug1> debug;
+        DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug));
+        ThrowIfFailed(debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL));
+    }
+#endif
+}
+
 int main() {
     wnd = std::make_unique<Window>(500, 500, L"Note 1");
     ctx = std::make_unique<DxContext>();
     Init();
     wnd->MainLoop(Update, Render);
-    WaitForGpu();
-    CloseHandle(ctx->fenceEvent);
-    ctx = nullptr;
-    wnd = nullptr;
+    CleanUp();
 }
