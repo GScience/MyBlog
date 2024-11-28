@@ -29,7 +29,6 @@ struct DxContext {
 
     UINT curFrameIndex = 0;
 };
-std::unique_ptr<Window> wnd;
 std::unique_ptr<DxContext> ctx;
 
 void WaitForGpu() {
@@ -70,11 +69,15 @@ void Render() {
 
     ID3D12CommandList* ppCommandLists[] = { ctx->commandList.Get() };
     ctx->commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+#if defined(ENABLE_VSYNC)
+    ThrowIfFailed(ctx->swapChain->Present(1, 0));
+#else
     ThrowIfFailed(ctx->swapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING));
+#endif
     MoveToNextFrame();
 }
 
-void Update() {
+void Update(const Window* wnd) {
     static UINT64 lastTime = GetTickCount64();
     static float lastRad[3]{ 0 };
     UINT64 curTime = GetTickCount64();
@@ -85,9 +88,11 @@ void Update() {
     clearColor[1] = std::sin(lastRad[1]) * 0.4f + 0.2f;
     clearColor[2] = std::sin(lastRad[2]) * 0.4f + 0.2f;
     lastTime = curTime;
+    if (wnd->GetInput().lMouseButton)
+        std::cout << "[" << curTime << "]" << wnd->GetInput().GetMousePos().x << "," << wnd->GetInput().GetMousePos().y << std::endl;
 }
 
-void Init() {
+void Init(const Window* wnd) {
     UINT dxgiFactoryFlags = 0;
     // 启用调试层
 #if defined(_DEBUG)
@@ -132,7 +137,9 @@ void Init() {
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.SampleDesc.Count = 1;
+#if !defined(ENABLE_VSYNC)
     swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+#endif
     ComPtr<IDXGISwapChain1> swapChain1;
     ThrowIfFailed(ctx->factory->CreateSwapChainForHwnd(
         ctx->commandQueue.Get(),
@@ -193,8 +200,6 @@ void CleanUp() {
             ThrowIfFailed(infoQueue->UnregisterMessageCallback(ctx->callbackCookie));
     }
 #endif
-    ctx = nullptr;
-    wnd = nullptr;
 #if defined(_DEBUG)
     {
         ComPtr<IDXGIDebug1> debug;
@@ -205,9 +210,10 @@ void CleanUp() {
 }
 
 int main() {
-    wnd = std::make_unique<Window>(500, 500, L"Note 1");
+    auto wnd = std::make_unique<Window>(500, 500, L"Note 1");
     ctx = std::make_unique<DxContext>();
-    Init();
-    wnd->MainLoop(Update, Render);
+    wnd->Run(Init, Update, Render);
     CleanUp();
+    ctx = nullptr;
+    wnd = nullptr;
 }

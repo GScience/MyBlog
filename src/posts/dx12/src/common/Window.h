@@ -2,8 +2,20 @@
 #include <iostream>
 #include "stdafx.h"
 
-using UpdateCallback = void(*)();
+class Window;
+using InitCallback = void(*)(const Window* wnd);
+using UpdateCallback = void(*)(const Window* wnd);
 using RenderCallback = void(*)();
+
+struct WindowInput {
+    std::atomic_bool vKeys[0xFF];
+    std::atomic_bool lMouseButton;
+    std::atomic_bool rMouseButton;
+    std::atomic_uint32_t mousePos;
+    POINTS GetMousePos() const {
+        return MAKEPOINTS(mousePos);
+    }
+};
 
 class Window {
     static LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -15,39 +27,82 @@ class Window {
         {
             LPCREATESTRUCT pCreateStruct = reinterpret_cast<LPCREATESTRUCT>(lParam);
             SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
+            return 0;
         }
-        return 0;
-
         case WM_KEYDOWN:
+            window->_cacheInput.vKeys[wParam] = true;
             return 0;
-
         case WM_KEYUP:
+            window->_cacheInput.vKeys[wParam] = false;
             return 0;
-
-        case WM_PAINT:
-            window->_update();
-            window->_render();
+        case WM_MOUSEMOVE:
+            window->_cacheInput.mousePos = lParam;
             return 0;
-
+        case WM_LBUTTONDOWN:
+            window->_cacheInput.lMouseButton = true;
+            return 0;
+        case WM_LBUTTONUP:
+            window->_cacheInput.lMouseButton = false;
+            return 0;
+        case WM_RBUTTONDOWN:
+            window->_cacheInput.rMouseButton = true;
+            return 0;
+        case WM_RBUTTONUP:
+            window->_cacheInput.rMouseButton = false;
+            return 0;
+        case WM_MOUSELEAVE:
+            window->_cacheInput.lMouseButton = false;
+            window->_cacheInput.rMouseButton = false;
+            return 0;
+        case WM_CLOSE:
+            window->_shouldWindowClose = true;
+            return 0;
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
         }
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
+    void MessageLoop() {
+        _shouldWindowClose = false;
+        MSG msg = {};
+        while (GetMessage(&msg, _hwnd, 0, 0) != 0 && !_shouldWindowClose) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+    }
+    void GameLoop() {
+        while (!_shouldWindowClose) {
+            CopyMemory(&_curFrameInput, &_cacheInput, sizeof(WindowInput));
+            _update(this);
+            _render();
+        }
+    }
+    static DWORD WINAPI GameThread(LPVOID param) {
+        reinterpret_cast<Window*>(param)->_init(reinterpret_cast<Window*>(param));
+        reinterpret_cast<Window*>(param)->GameLoop();
+        return 0;
+    }
     UINT _width, _height;
     HWND _hwnd;
+    InitCallback _init;
     UpdateCallback _update;
     RenderCallback _render;
+    std::atomic_bool _shouldWindowClose = false;
+    WindowInput _cacheInput;
+    WindowInput _curFrameInput;
 public:
-    UINT GetWidth() {
+    UINT GetWidth() const {
         return _width;
     }
-    UINT GetHeight() {
+    UINT GetHeight() const {
         return _height;
     }
-    HWND GetHandle() {
+    HWND GetHandle() const {
         return _hwnd;
+    }
+    const WindowInput& GetInput() const {
+        return _curFrameInput;
     }
     Window(UINT width, UINT height, LPCWSTR title) : _width(width), _height(height) {
         HINSTANCE hInstance = GetModuleHandle(nullptr);
@@ -75,21 +130,17 @@ public:
             hInstance,
             this);
     }
-
-    void MainLoop(UpdateCallback u, RenderCallback r) {
+    void Run(InitCallback i, UpdateCallback u, RenderCallback r) {
+        _init = i;
         _update = u;
         _render = r;
         ShowWindow(_hwnd, TRUE);
-        MSG msg = {};
-        while (msg.message != WM_QUIT)
-        {
-            // Process any messages in the queue.
-            if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-            {
-                TranslateMessage(&msg);
-                DispatchMessage(&msg);
-            }
-        }
+        auto gameThread = CreateThread(nullptr, 0, GameThread, this, 0, nullptr);
+        if (gameThread == 0) throw std::exception("Failed to create render thread");
+        MessageLoop();
+        WaitForSingleObject(gameThread, INFINITE);
+        ShowWindow(_hwnd, FALSE);
+        CloseHandle(gameThread);
     }
 
     ~Window() {

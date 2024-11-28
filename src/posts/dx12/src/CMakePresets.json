@@ -22,8 +22,19 @@
       }
     },
     {
+      "name": "vsync",
+      "hidden": true,
+      "cacheVariables": {
+        "ENABLE_VSYNC": "On"
+      }
+    },
+    {
       "name": "default",
       "inherits": [ "ninja-multi", "vcpkg" ]
+    },
+    {
+      "name": "default-vsync",
+      "inherits": [ "default", "vsync" ]
     }
   ],
   "buildPresets": [
@@ -37,6 +48,18 @@
       "name": "default-release",
       "displayName": "Default Release Build",
       "configurePreset": "default",
+      "configuration": "Release"
+    },
+    {
+      "name": "default-vsync-debug",
+      "displayName": "Default Vsync Debug Build",
+      "configurePreset": "default-vsync",
+      "configuration": "Debug"
+    },
+    {
+      "name": "default-vsync-release",
+      "displayName": "Default Vsync Release Build",
+      "configurePreset": "default-vsync",
       "configuration": "Release"
     }
   ]
