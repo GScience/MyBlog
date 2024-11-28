@@ -9,7 +9,7 @@
     {
       "name": "ninja-multi",
       "hidden": true,
-      "binaryDir": "${sourceDir}/out",
+      "binaryDir": "${sourceDir}/out/${presetName}",
       "displayName": "Ninja Multi-Config",
       "description": "Default build using Ninja Multi-Config generator",
       "generator": "Ninja Multi-Config"
