@@ -367,20 +367,6 @@ void Init(const Window* wnd) {
 void CleanUp() {
     WaitForGpu();
     CloseHandle(ctx->fenceEvent);
-#if defined(_DEBUG)
-    {
-        ComPtr<ID3D12InfoQueue1> infoQueue;
-        if (ctx->callbackCookie != 0 && SUCCEEDED(ctx->device->QueryInterface(IID_PPV_ARGS(&infoQueue))))
-            ThrowIfFailed(infoQueue->UnregisterMessageCallback(ctx->callbackCookie));
-    }
-#endif
-#if defined(_DEBUG)
-    {
-        ComPtr<IDXGIDebug1> debug;
-        DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug));
-        ThrowIfFailed(debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL));
-    }
-#endif
 }
 
 int main() {
@@ -390,4 +376,11 @@ int main() {
     CleanUp();
     ctx = nullptr;
     wnd = nullptr;
+#if defined(_DEBUG)
+    {
+        ComPtr<IDXGIDebug1> debug;
+        DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug));
+        ThrowIfFailed(debug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_ALL));
+    }
+#endif
 }
