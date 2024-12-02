@@ -5,7 +5,7 @@
 class Window;
 using InitCallback = void(*)(const Window* wnd);
 using UpdateCallback = void(*)(const Window* wnd);
-using RenderCallback = void(*)();
+using RenderCallback = void(*)(const Window* wnd);
 
 struct WindowInput {
     std::atomic_bool vKeys[0xFF];
@@ -75,7 +75,7 @@ class Window {
         while (!_shouldWindowClose) {
             CopyMemory(&_curFrameInput, &_cacheInput, sizeof(WindowInput));
             _update(this);
-            _render();
+            _render(this);
         }
     }
     static DWORD WINAPI GameThread(LPVOID param) {
@@ -104,7 +104,7 @@ public:
     const WindowInput& GetInput() const {
         return _curFrameInput;
     }
-    Window(UINT width, UINT height, LPCWSTR title) : _width(width), _height(height) {
+    Window(UINT width, UINT height, LPCWSTR title) : _width(width), _height(height), _init(nullptr), _update(nullptr), _render(nullptr) {
         HINSTANCE hInstance = GetModuleHandle(nullptr);
         WNDCLASSEX windowClass = { 0 };
         windowClass.cbSize = sizeof(WNDCLASSEX);

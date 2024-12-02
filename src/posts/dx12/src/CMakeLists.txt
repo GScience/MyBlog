@@ -8,3 +8,4 @@ project(dx12_learning)
 include("cmake/functions.cmake")
 
 add_note_code(Note1 "Note1.cpp")
+add_note_asset(Note1 "Shader.hlsl")
